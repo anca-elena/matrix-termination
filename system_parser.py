@@ -1,13 +1,15 @@
 import argparse
+import xml.etree.ElementTree as ET
+from xml.etree.ElementTree import tostring
 
 class Parser():
     def __init__(self):
         self.parser = argparse.ArgumentParser (
             prog='python3 ./solver.py', 
             formatter_class=argparse.RawDescriptionHelpFormatter,
-            description='Parses a .txt file into an alphabet, terms, and rules, and provides a solution to the termination problem.',
-            epilog='Example usage:\npython3 ./solver.py example.txt 3 1\n' +
-                   '- The parsed file is example.txt\n' +
+            description='Parses an XML file into an alphabet, terms, and rules, and provides a solution to the termination problem.',
+            epilog='Example usage:\npython3 ./solver.py example.xml 3 1\n' +
+                   '- The parsed file is example.xml\n' +
                    '- The dimension of all matrices is 3x3\n' + 
                    '- The maximum value of each entry in the interpretation of the alphabet is 1'
         )
@@ -25,18 +27,29 @@ class Parser():
         self.dimension = args.dimension
         self.max = args.max
 
-        file = open(filename)
-        lines = file.readlines()
+        tree = ET.parse(filename)
+        root = tree.getroot()
 
-        for line in lines: 
-            lhs, rhs = line.split("->")
-            rhs = rhs.replace('\n', '')
+        # Extract rules
+        for rule in root.findall('.//rule'):
+            lhs_string = ''
+            rhs_string = ''
 
-            self.alphabet.update(''.join(set(lhs)))
-            self.alphabet.update(''.join(set(rhs)))
+            lhs = rule.find('.//lhs')
+            for letter in lhs.findall('.//name'):
+                lhs_string += letter.text
 
-            self.terms.add(lhs)
-            self.terms.add(rhs)
+            rhs = rule.find('.//rhs')
+            for letter in rhs.findall('.//name'):
+                rhs_string += letter.text
 
-            self.rules.add((lhs, rhs))
+            self.rules.add((lhs_string, rhs_string))
+            self.terms.add(lhs_string)
+            self.terms.add(rhs_string)
 
+        for funcsym in root.findall('.//signature/funcsym'):
+            letter = funcsym.find('.//name').text
+            self.alphabet.add(letter)
+
+p = Parser()
+p.parse()
